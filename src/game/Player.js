@@ -6,16 +6,16 @@ export class Player {
   constructor(scene) {
     this.scene = scene;
 
-    // State
-    this.position = new THREE.Vector3(0, 120, 0); // Spawn high on Great Sky Island
+    // Spawn safely on the solid floor of the Awakening Sanctuary
+    this.position = new THREE.Vector3(0, 125.0, 0);
     this.velocity = new THREE.Vector3(0, 0, 0);
     this.rotation = 0;
-    this.state = 'falling'; // 'grounded' | 'falling' | 'diving' | 'gliding' | 'climbing' | 'attacking' | 'aiming'
-    this.isGrounded = false;
+    this.state = 'grounded'; // Spawn firmly grounded!
+    this.isGrounded = true;
 
     // Attributes
     this.maxHealth = 100;
-    this.health = 100; // 5 Hearts (20 hp each)
+    this.health = 100; // 5 Hearts
     this.maxStamina = 100;
     this.stamina = 100;
     this.staminaExhausted = false;
@@ -23,16 +23,13 @@ export class Player {
     // Movement speeds
     this.walkSpeed = 6.0;
     this.runSpeed = 12.0;
-    this.glideSpeed = 10.0;
-    this.diveSpeed = 35.0;
+    this.glideSpeed = 11.5;
+    this.diveSpeed = 38.0;
     this.climbSpeed = 3.5;
     this.jumpForce = 9.5;
 
     // Combat
     this.attackTimer = 0;
-    this.comboStep = 0;
-
-    // Active projectiles (arrows)
     this.arrows = [];
 
     // Build 3D Mesh
@@ -46,7 +43,6 @@ export class Player {
   }
 
   buildCharacterMesh() {
-    // Cel-shaded styled character for Link
     const skinMat = new THREE.MeshToonMaterial({ color: 0xffdfc4 });
     const hairMat = new THREE.MeshToonMaterial({ color: 0xf5cf47 }); // Golden blond
     const tunicMat = new THREE.MeshToonMaterial({ color: 0x22a6b3 }); // Champion's Tunic cyan-teal
@@ -55,7 +51,7 @@ export class Player {
     const zonaiArmMat = new THREE.MeshToonMaterial({
       color: 0x2ed573,
       emissive: 0x1dd1a1,
-      emissiveIntensity: 0.6
+      emissiveIntensity: 0.7
     }); // Glowing green Zonai prosthetic arm
 
     // Torso / Tunic
@@ -66,14 +62,14 @@ export class Player {
     this.mesh.add(this.torso);
 
     // Head
-    const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
+    const headGeo = new THREE.SphereGeometry(0.32, 16, 16);
     this.head = new THREE.Mesh(headGeo, skinMat);
     this.head.position.y = 1.65;
     this.head.castShadow = true;
     this.mesh.add(this.head);
 
     // Hair
-    const hairGeo = new THREE.ConeGeometry(0.36, 0.4, 8);
+    const hairGeo = new THREE.ConeGeometry(0.38, 0.45, 8);
     hairGeo.rotateX(Math.PI);
     const hair = new THREE.Mesh(hairGeo, hairMat);
     hair.position.set(0, 1.78, -0.05);
@@ -86,7 +82,7 @@ export class Player {
     this.leftArm.castShadow = true;
     this.mesh.add(this.leftArm);
 
-    // Right Arm (Zonai Glowing Arm!)
+    // Right Arm (Glowing Zonai Arm!)
     this.rightArm = new THREE.Mesh(armGeo, zonaiArmMat);
     this.rightArm.position.set(0.48, 1.0, 0);
     this.rightArm.castShadow = true;
@@ -104,29 +100,29 @@ export class Player {
     this.rightLeg.castShadow = true;
     this.mesh.add(this.rightLeg);
 
-    // Master Sword & Sheath
+    // Weapons
     this.setupWeapons();
 
-    // Paraglider Mesh
-    this.setupParaglider();
+    // High-Fidelity TotK Paraglider
+    this.setupTotKParaglider();
   }
 
   setupWeapons() {
     this.weaponGroup = new THREE.Group();
 
-    // Blade
-    const bladeGeo = new THREE.BoxGeometry(0.08, 1.1, 0.03);
+    // Master Sword Blade
+    const bladeGeo = new THREE.BoxGeometry(0.08, 1.15, 0.03);
     const bladeMat = new THREE.MeshToonMaterial({
       color: 0xdff9fb,
       emissive: 0x7ed6df,
-      emissiveIntensity: 0.3
+      emissiveIntensity: 0.35
     });
     const blade = new THREE.Mesh(bladeGeo, bladeMat);
-    blade.position.y = 0.55;
+    blade.position.y = 0.58;
     this.weaponGroup.add(blade);
 
-    // Guard (Triforce purple/gold)
-    const guardGeo = new THREE.BoxGeometry(0.35, 0.07, 0.08);
+    // Purple & Gold Triforce Guard
+    const guardGeo = new THREE.BoxGeometry(0.38, 0.08, 0.09);
     const guardMat = new THREE.MeshToonMaterial({ color: 0x4834d4 });
     const guard = new THREE.Mesh(guardGeo, guardMat);
     this.weaponGroup.add(guard);
@@ -138,13 +134,12 @@ export class Player {
     hilt.position.y = -0.15;
     this.weaponGroup.add(hilt);
 
-    // Position on right hand
     this.weaponGroup.position.set(0.48, 0.65, 0.2);
     this.weaponGroup.rotation.x = Math.PI / 2;
     this.mesh.add(this.weaponGroup);
 
-    // Hylian Shield on Left Arm
-    const shieldGeo = new THREE.BoxGeometry(0.55, 0.7, 0.06);
+    // Hylian Shield
+    const shieldGeo = new THREE.BoxGeometry(0.58, 0.75, 0.07);
     const shieldMat = new THREE.MeshToonMaterial({ color: 0x130f40 });
     this.shieldMesh = new THREE.Mesh(shieldGeo, shieldMat);
     this.shieldMesh.position.set(-0.5, 1.0, 0.15);
@@ -153,41 +148,106 @@ export class Player {
     this.mesh.add(this.shieldMesh);
   }
 
-  setupParaglider() {
+  setupTotKParaglider() {
     this.paraglider = new THREE.Group();
 
-    // Sail cloth
-    const sailGeo = new THREE.BoxGeometry(2.4, 0.02, 1.1);
-    const sailMat = new THREE.MeshToonMaterial({ color: 0x795548, side: THREE.DoubleSide });
+    // 1. Generate Authentic Canvas Texture for TotK Paraglider Sail
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+
+    // Weathered brown leather base
+    ctx.fillStyle = '#4a2f1b';
+    ctx.fillRect(0, 0, 512, 256);
+
+    // Royal Blue Wing Chevron
+    ctx.fillStyle = '#1e3799';
+    ctx.beginPath();
+    ctx.moveTo(0, 50);
+    ctx.lineTo(256, 190);
+    ctx.lineTo(512, 50);
+    ctx.lineTo(512, 170);
+    ctx.lineTo(256, 256);
+    ctx.lineTo(0, 170);
+    ctx.closePath();
+    ctx.fill();
+
+    // Golden Zonai Trim & Borders
+    ctx.strokeStyle = '#f9ca24';
+    ctx.lineWidth = 8;
+    ctx.stroke();
+
+    // Sacred White Bird Silhouette in center
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.arc(256, 130, 26, 0, Math.PI * 2);
+    ctx.fill();
+    // Wing feathers
+    ctx.beginPath();
+    ctx.moveTo(256, 110);
+    ctx.lineTo(220, 135);
+    ctx.lineTo(256, 145);
+    ctx.lineTo(292, 135);
+    ctx.closePath();
+    ctx.fill();
+
+    const sailTexture = new THREE.CanvasTexture(canvas);
+
+    // Sail Fabric Mesh (curved slightly downward for aerodynamic feel)
+    const sailGeo = new THREE.PlaneGeometry(3.2, 1.4, 8, 4);
+    // Add slight curve
+    const posAttr = sailGeo.attributes.position;
+    for (let i = 0; i < posAttr.count; i++) {
+      const x = posAttr.getX(i);
+      const zCurve = -Math.pow(x / 1.6, 2) * 0.2;
+      posAttr.setZ(i, zCurve);
+    }
+    sailGeo.computeVertexNormals();
+    sailGeo.rotateX(-Math.PI / 2);
+
+    const sailMat = new THREE.MeshStandardMaterial({
+      map: sailTexture,
+      roughness: 0.8,
+      metalness: 0.1,
+      side: THREE.DoubleSide
+    });
     const sail = new THREE.Mesh(sailGeo, sailMat);
-    sail.position.y = 0.8;
+    sail.position.y = 1.0;
     this.paraglider.add(sail);
 
-    // Framework struts
-    const strutMat = new THREE.MeshToonMaterial({ color: 0xdfe4ea });
-    const leftStrut = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9), strutMat);
-    leftStrut.position.set(-0.6, 0.4, 0);
-    this.paraglider.add(leftStrut);
+    // Wooden Crossbar Bow Frame
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x5b381e });
+    const crossbar = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 3.3, 8), woodMat);
+    crossbar.rotation.z = Math.PI / 2;
+    crossbar.position.set(0, 1.02, 0);
+    this.paraglider.add(crossbar);
 
-    const rightStrut = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.9), strutMat);
-    rightStrut.position.set(0.6, 0.4, 0);
-    this.paraglider.add(rightStrut);
+    // Dual Hanging Grips & Straps (where Link's hands hold)
+    const strapMat = new THREE.MeshStandardMaterial({ color: 0x3d271d });
+    const leftStrap = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.8, 8), strapMat);
+    leftStrap.position.set(-0.55, 0.6, 0);
+    this.paraglider.add(leftStrap);
 
-    this.paraglider.position.set(0, 1.4, 0);
+    const rightStrap = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.8, 8), strapMat);
+    rightStrap.position.set(0.55, 0.6, 0);
+    this.paraglider.add(rightStrap);
+
+    this.paraglider.position.set(0, 1.25, 0);
     this.paraglider.visible = false;
     this.mesh.add(this.paraglider);
   }
 
   setupWindTrails() {
-    const count = 40;
+    const count = 50;
     const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(count * 6); // lines
+    const positions = new Float32Array(count * 6);
     geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
 
     const material = new THREE.LineBasicMaterial({
       color: 0xffffff,
       transparent: true,
-      opacity: 0.6,
+      opacity: 0.7,
       linewidth: 2
     });
 
@@ -206,7 +266,7 @@ export class Player {
 
   updateStamina(delta) {
     if (this.isGrounded && this.state !== 'sprinting') {
-      this.stamina = Math.min(this.maxStamina, this.stamina + 25 * delta);
+      this.stamina = Math.min(this.maxStamina, this.stamina + 28 * delta);
       if (this.stamina > 25) this.staminaExhausted = false;
     }
   }
@@ -216,48 +276,50 @@ export class Player {
     const isMoving = Math.abs(moveInput.forward) > 0.1 || Math.abs(moveInput.right) > 0.1;
     const wantsSprint = input.isSprinting() && !this.staminaExhausted && this.stamina > 5;
 
-    // Check jump / paraglider input
+    // Check jump / paraglider deployment
     if (input.jumpPressed) {
       if (this.isGrounded) {
         this.velocity.y = this.jumpForce;
         this.isGrounded = false;
         this.state = 'falling';
       } else if (this.state === 'falling' || this.state === 'diving') {
-        // Deploy paraglider!
+        // Deploy TotK Paraglider!
         if (this.stamina > 10) {
           this.state = 'gliding';
           this.paraglider.visible = true;
           sound.playGliderDeploy();
         }
       } else if (this.state === 'gliding') {
-        // Put away glider, enter skydiving freefall
+        // Fold paraglider into freefall dive
         this.state = 'diving';
         this.paraglider.visible = false;
       }
     }
 
-    // Gravity & Fall physics
+    // Aerodynamics & Gravity
     if (!this.isGrounded) {
       if (this.state === 'gliding') {
-        // Controlled slow descent
-        this.velocity.y = -2.5;
-        this.stamina = Math.max(0, this.stamina - 7.5 * delta);
+        // Controlled, gentle gliding glide
+        this.velocity.y = -2.2;
+        this.stamina = Math.max(0, this.stamina - 6.5 * delta);
+        sound.setWindIntensity(0.25);
+
         if (this.stamina <= 0) {
           this.staminaExhausted = true;
           this.state = 'falling';
           this.paraglider.visible = false;
         }
       } else if (this.state === 'diving') {
-        // Fast aerodynamic freefall through the clouds
-        this.velocity.y = Math.max(-this.diveSpeed, this.velocity.y - 45 * delta);
-        sound.setWindIntensity(0.9);
+        // High-speed TotK skydiving dive
+        this.velocity.y = Math.max(-this.diveSpeed, this.velocity.y - 48 * delta);
+        sound.setWindIntensity(0.95);
         this.windTrails.visible = true;
         this.updateWindParticles();
       } else {
-        // Standard fall
+        // Standard air drop
         this.velocity.y -= 25 * delta;
         sound.setWindIntensity(Math.min(1.0, Math.abs(this.velocity.y) / 30));
-        this.windTrails.visible = Math.abs(this.velocity.y) > 20;
+        this.windTrails.visible = Math.abs(this.velocity.y) > 22;
       }
     } else {
       sound.setWindIntensity(0);
@@ -282,7 +344,6 @@ export class Player {
       moveDir.y = 0;
       moveDir.normalize();
 
-      // Rotate player towards movement
       const targetAngle = Math.atan2(moveDir.x, moveDir.z);
       this.mesh.rotation.y = targetAngle;
       this.rotation = targetAngle;
@@ -299,10 +360,10 @@ export class Player {
     this.position.y += this.velocity.y * delta;
     this.position.z += this.velocity.z * delta;
 
-    // Check Island Collisions / Grounding
+    // Check Terrain Collisions
     this.checkTerrainCollision(islands);
 
-    // If fallen way below Hyrule (void safe reset to Awakening Island)
+    // Fall safety respawn
     if (this.position.y < -150) {
       this.respawn();
     }
@@ -323,8 +384,7 @@ export class Player {
 
       if (dist2D < collider.radius + playerRadius) {
         const groundHeight = collider.position.y + collider.height;
-        // Check if player is right above or standing on it
-        if (this.position.y >= groundHeight - 1.2 && this.position.y <= groundHeight + 2.0) {
+        if (this.position.y >= groundHeight - 1.4 && this.position.y <= groundHeight + 2.5) {
           if (groundHeight > highestGround) {
             highestGround = groundHeight;
           }
@@ -362,7 +422,7 @@ export class Player {
       pos[i + 2] = this.position.z + Math.sin(angle) * r;
 
       pos[i + 3] = pos[i];
-      pos[i + 4] = pos[i + 1] + 2.5; // Upward streak
+      pos[i + 4] = pos[i + 1] + 2.8;
       pos[i + 5] = pos[i + 2];
     }
     this.windTrails.geometry.attributes.position.needsUpdate = true;
@@ -380,11 +440,9 @@ export class Player {
       this.attackTimer = 0.35;
       this.state = 'attacking';
       sound.playSwordSlash();
-      // Animate sword slash swing
       this.weaponGroup.rotation.z = Math.PI * 0.8;
     }
 
-    // Bow Aiming & Shooting
     if (input.isAiming() && this.state !== 'gliding') {
       this.state = 'aiming';
       if (input.mouse.leftClicked && inventory.arrows > 0) {
@@ -399,13 +457,11 @@ export class Player {
     inventory.arrows--;
     sound.playSwordSlash();
 
-    // Create Arrow
     const arrowGeo = new THREE.CylinderGeometry(0.02, 0.02, 1.2, 8);
-    const arrowMat = new THREE.MeshBasicMaterial({ color: 0x33ffaa }); // Zonai energy arrow
+    const arrowMat = new THREE.MeshBasicMaterial({ color: 0x33ffaa });
     const arrow = new THREE.Mesh(arrowGeo, arrowMat);
     arrow.position.copy(this.position).add(new THREE.Vector3(0, 1.5, 0));
 
-    // Shoot in direction Link is facing
     const dir = new THREE.Vector3(
       Math.sin(this.rotation),
       0.1,
@@ -428,7 +484,7 @@ export class Player {
       const arr = this.arrows[i];
       arr.life -= delta;
       arr.mesh.position.addScaledVector(arr.velocity, delta);
-      arr.velocity.y -= 9.8 * delta; // Bullet drop
+      arr.velocity.y -= 9.8 * delta;
 
       if (arr.life <= 0 || arr.mesh.position.y < -50) {
         this.scene.remove(arr.mesh);
@@ -459,21 +515,31 @@ export class Player {
         this.leftArm.rotation.x = 0;
         this.rightArm.rotation.x = 0;
       }
+      this.mesh.rotation.x = 0;
+      this.mesh.rotation.z = 0;
     } else if (this.state === 'diving') {
-      // Skydiving pose: arms out, legs spread, face down
+      // Skydiving pose
       this.mesh.rotation.x = Math.PI / 2.3;
+      this.mesh.rotation.z = 0;
       this.leftArm.rotation.z = -1.2;
       this.rightArm.rotation.z = 1.2;
       this.leftLeg.rotation.z = -0.4;
       this.rightLeg.rotation.z = 0.4;
     } else if (this.state === 'gliding') {
-      this.mesh.rotation.x = 0;
-      this.leftArm.rotation.x = -Math.PI * 0.8;
-      this.rightArm.rotation.x = -Math.PI * 0.8;
-      this.leftLeg.rotation.z = 0;
-      this.rightLeg.rotation.z = 0;
+      // Paraglider pose: hands holding straps overhead, feet trailing slightly
+      this.mesh.rotation.x = 0.15;
+      // Banking tilt when moving left/right
+      const bank = -this.velocity.x * 0.03;
+      this.mesh.rotation.z = bank;
+      this.leftArm.rotation.x = -Math.PI * 0.85;
+      this.rightArm.rotation.x = -Math.PI * 0.85;
+      this.leftArm.rotation.z = -0.2;
+      this.rightArm.rotation.z = 0.2;
+      this.leftLeg.rotation.x = 0.2;
+      this.rightLeg.rotation.x = 0.2;
     } else {
       this.mesh.rotation.x = 0;
+      this.mesh.rotation.z = 0;
     }
   }
 
@@ -488,9 +554,11 @@ export class Player {
   respawn() {
     this.health = this.maxHealth;
     this.stamina = this.maxStamina;
-    this.position.set(0, 120, 0); // Back to Great Sky Island
+    this.position.set(0, 125.0, 0); // Solid ground on Awakening Sanctuary
     this.velocity.set(0, 0, 0);
-    this.state = 'falling';
+    this.state = 'grounded';
+    this.isGrounded = true;
+    this.paraglider.visible = false;
   }
 
   getHandPosition() {
@@ -499,4 +567,3 @@ export class Player {
     return hand;
   }
 }
-

@@ -6,6 +6,9 @@ export class GameRenderer {
     this.width = window.innerWidth;
     this.height = window.innerHeight;
 
+    // Create 3-tone Cel-Shading Ramp Texture for Zelda TotK toon rendering
+    this.createToonRampTexture();
+
     // Create WebGL Renderer
     this.renderer = new THREE.WebGLRenderer({
       canvas: this.canvas,
@@ -17,12 +20,12 @@ export class GameRenderer {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.toneMappingExposure = 1.25;
 
     // Scene
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x8cd3ff); // High sky Hyrule blue
-    this.scene.fog = new THREE.FogExp2(0xb5e2ff, 0.0018);
+    this.scene.background = new THREE.Color(0x7ac1eb); // Hyrule Sky blue
+    this.scene.fog = new THREE.FogExp2(0xbbe4ff, 0.0016);
 
     // Setup Lighting
     this.setupLighting();
@@ -30,48 +33,65 @@ export class GameRenderer {
     // Setup Sky & Clouds
     this.setupSkyDome();
 
-    // Particle Group for Zonai floating embers
-    this.particles = null;
+    // Zonai glowing particles
     this.setupZonaiParticles();
 
-    // Resize handling
     window.addEventListener('resize', () => this.onResize());
   }
 
+  createToonRampTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 4;
+    canvas.height = 1;
+    const ctx = canvas.getContext('2d');
+    // 3 discrete bands of shading: dark shadow, midtone, bright highlight
+    ctx.fillStyle = '#666666';
+    ctx.fillRect(0, 0, 1, 1);
+    ctx.fillStyle = '#999999';
+    ctx.fillRect(1, 0, 1, 1);
+    ctx.fillStyle = '#cccccc';
+    ctx.fillRect(2, 0, 1, 1);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(3, 0, 1, 1);
+
+    this.toonRamp = new THREE.CanvasTexture(canvas);
+    this.toonRamp.minFilter = THREE.NearestFilter;
+    this.toonRamp.magFilter = THREE.NearestFilter;
+  }
+
   setupLighting() {
-    // Ambient light - warm sky fill
-    const ambientLight = new THREE.AmbientLight(0xfff4e6, 0.65);
+    // Warm Hyrule Sky fill
+    const ambientLight = new THREE.AmbientLight(0xfff6ea, 0.75);
     this.scene.add(ambientLight);
 
-    // Main Directional Sunlight with shadows
-    this.sunLight = new THREE.DirectionalLight(0xfffaed, 1.4);
-    this.sunLight.position.set(120, 250, 80);
+    // Golden Directional Sunlight with sharp soft shadows
+    this.sunLight = new THREE.DirectionalLight(0xfffae6, 1.55);
+    this.sunLight.position.set(140, 260, 90);
     this.sunLight.castShadow = true;
     this.sunLight.shadow.mapSize.width = 2048;
     this.sunLight.shadow.mapSize.height = 2048;
     this.sunLight.shadow.camera.near = 10;
     this.sunLight.shadow.camera.far = 600;
-    this.sunLight.shadow.camera.left = -150;
-    this.sunLight.shadow.camera.right = 150;
-    this.sunLight.shadow.camera.top = 150;
-    this.sunLight.shadow.camera.bottom = -150;
-    this.sunLight.shadow.bias = -0.0005;
+    this.sunLight.shadow.camera.left = -160;
+    this.sunLight.shadow.camera.right = 160;
+    this.sunLight.shadow.camera.top = 160;
+    this.sunLight.shadow.camera.bottom = -160;
+    this.sunLight.shadow.bias = -0.0004;
     this.scene.add(this.sunLight);
 
-    // Hemisphere light (sky blue to ground golden-green)
-    const hemiLight = new THREE.HemisphereLight(0x7ac1eb, 0xb8cf7e, 0.5);
+    // Hemisphere light (sky cyan to ground golden-green)
+    const hemiLight = new THREE.HemisphereLight(0x7ed6df, 0xc4e538, 0.55);
     this.scene.add(hemiLight);
   }
 
   setupSkyDome() {
-    // Large hemisphere sky dome with gradient
-    const skyGeo = new THREE.SphereGeometry(800, 32, 15);
+    const skyGeo = new THREE.SphereGeometry(850, 32, 15);
     const skyMat = new THREE.ShaderMaterial({
       uniforms: {
-        topColor: { value: new THREE.Color(0x2887e3) },
-        bottomColor: { value: new THREE.Color(0xfff6dc) },
-        offset: { value: 30 },
-        exponent: { value: 0.6 }
+        topColor: { value: new THREE.Color(0x1e88e5) },
+        bottomColor: { value: new THREE.Color(0xfff8e7) },
+        offset: { value: 35 },
+        exponent: { value: 0.55 }
       },
       vertexShader: `
         varying vec3 vWorldPosition;
@@ -97,44 +117,43 @@ export class GameRenderer {
     const sky = new THREE.Mesh(skyGeo, skyMat);
     this.scene.add(sky);
 
-    // Floating low-poly fluffy TotK clouds
+    // Fluffy TotK cloud formations
     this.cloudGroup = new THREE.Group();
-    const cloudGeo = new THREE.DodecahedronGeometry(14, 1);
+    const cloudGeo = new THREE.DodecahedronGeometry(15, 1);
     const cloudMat = new THREE.MeshStandardMaterial({
       color: 0xffffff,
-      roughness: 0.9,
-      metalness: 0.05,
+      roughness: 0.95,
+      metalness: 0.0,
       transparent: true,
-      opacity: 0.82,
+      opacity: 0.85,
       flatShading: true
     });
 
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 48; i++) {
       const puff = new THREE.Mesh(cloudGeo, cloudMat);
       const angle = Math.random() * Math.PI * 2;
-      const radius = 100 + Math.random() * 450;
-      const height = -20 + (Math.random() * 70 - 35);
+      const radius = 90 + Math.random() * 480;
+      const height = -15 + (Math.random() * 80 - 40);
       puff.position.set(Math.cos(angle) * radius, height, Math.sin(angle) * radius);
-      puff.scale.set(1.5 + Math.random() * 2, 0.6 + Math.random() * 0.8, 1.5 + Math.random() * 2);
+      puff.scale.set(1.6 + Math.random() * 2.2, 0.7 + Math.random() * 0.9, 1.6 + Math.random() * 2.2);
       this.cloudGroup.add(puff);
     }
     this.scene.add(this.cloudGroup);
   }
 
   setupZonaiParticles() {
-    // Floating glowing green & gold embers reminiscent of Zonai magic
-    const count = 300;
+    const count = 350;
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
 
-    const color1 = new THREE.Color(0x35ffaa); // Zonai green
-    const color2 = new THREE.Color(0xffe279); // Golden light
+    const color1 = new THREE.Color(0x2ed573); // Zonai emerald
+    const color2 = new THREE.Color(0xffd32a); // Golden sacred energy
 
     for (let i = 0; i < count; i++) {
-      positions[i * 3] = (Math.random() - 0.5) * 200;
-      positions[i * 3 + 1] = Math.random() * 80;
-      positions[i * 3 + 2] = (Math.random() - 0.5) * 200;
+      positions[i * 3] = (Math.random() - 0.5) * 220;
+      positions[i * 3 + 1] = Math.random() * 90;
+      positions[i * 3 + 2] = (Math.random() - 0.5) * 220;
 
       const chosenColor = Math.random() > 0.4 ? color1 : color2;
       colors[i * 3] = chosenColor.r;
@@ -146,10 +165,10 @@ export class GameRenderer {
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
-      size: 1.2,
+      size: 1.4,
       vertexColors: true,
       transparent: true,
-      opacity: 0.7,
+      opacity: 0.75,
       blending: THREE.AdditiveBlending
     });
 
@@ -158,17 +177,15 @@ export class GameRenderer {
   }
 
   update(delta) {
-    // Animate clouds slowly
     if (this.cloudGroup) {
-      this.cloudGroup.rotation.y += delta * 0.015;
+      this.cloudGroup.rotation.y += delta * 0.012;
     }
 
-    // Animate Zonai particles floating upwards
     if (this.particles) {
       const positions = this.particles.geometry.attributes.position.array;
       for (let i = 1; i < positions.length; i += 3) {
-        positions[i] += delta * 2.5;
-        if (positions[i] > 80) positions[i] = 0;
+        positions[i] += delta * 2.8;
+        if (positions[i] > 90) positions[i] = 0;
       }
       this.particles.geometry.attributes.position.needsUpdate = true;
     }
@@ -184,4 +201,3 @@ export class GameRenderer {
     this.renderer.render(this.scene, camera);
   }
 }
-
